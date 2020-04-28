@@ -230,7 +230,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 kubeadm join 192.168.88.239:6443 --token sjvoxb.ij9v4i3h9o06igne \
     --discovery-token-ca-cert-hash sha256:a138c7f3547e5dad98ea152c44e3f1adffc68e71cf7bc9a42af402831bd575c4
 ```
-**4、安装flannel网络插件**
+**6、安装flannel网络插件**
 ```
 cd /etc/kubernetes/yaml/
 wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
@@ -238,7 +238,7 @@ sed -i '/vxlan/s/$/,/' /etc/kubernetes/yaml/kube-flannel.yml
 sed -i '/vxlan/a\        "Directrouting": true' /etc/kubernetes/yaml/kube-flannel.yml
 kubectl apply -f kube-flannel.yml
 ```
-**5、kube-proxy修改ipvs模式**
+**7、kube-proxy修改ipvs模式**
 
 加载ipvs模块
 ```
@@ -260,7 +260,7 @@ yum -y install ipset ipvsadm
 ```
 kubectl get pod -n kube-system | grep kube-proxy | awk '{system("kubectl delete pod "$1" -n kube-system")}'
 ```
-**6、删除master上的污点配置 [可选]**
+**8、删除master上的污点配置 [可选]**
 ```
 kubectl taint nodes node7 node-role.kubernetes.io/master:NoSchedule-
 ```
