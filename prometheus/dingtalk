@@ -1,0 +1,6 @@
+# 1、部署钉钉告警插件
+```
+kubectl -nprometheus apply -f dingtalk.yaml
+```
+
+# 2、配置altermanager
