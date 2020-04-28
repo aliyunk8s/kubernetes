@@ -1,7 +1,6 @@
 # 1、配置ssl证书
 
-上传ssl证书dashboard.crt和dashboard.key
-创建secret
+上传ssl证书dashboard.crt和dashboard.key,并生成secret
 ```
 kubectl create secret generic kubernetes-dashboard-certs --from-file="./dashboard.crt,./dashboard.key" -n kubernetes-dashboard
 ```
