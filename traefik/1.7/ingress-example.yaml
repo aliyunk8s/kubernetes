@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: polaris-frontend-website
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+  - host: www.bjx.cloud
+    http:
+      paths:
+      - path:
+        backend:
+          serviceName: polaris-frontend-website
+          servicePort: 80
+  - host: bjx.cloud
+    http:
+      paths:
+      - path:
+        backend:
+          serviceName: polaris-frontend-website
+          servicePort: 80
