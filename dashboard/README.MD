@@ -2,6 +2,7 @@
 
 上传ssl证书dashboard.crt和dashboard.key,并生成secret
 ```
+kubectl create ns kubernetes-dashboard
 kubectl create secret generic kubernetes-dashboard-certs --from-file="./dashboard.crt,./dashboard.key" -n kubernetes-dashboard
 ```
 
