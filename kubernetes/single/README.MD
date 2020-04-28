@@ -200,6 +200,36 @@ mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
+**4、其它master节点加入集群 [可选]**
+
+复制证书和秘钥到其它master节点服务器上
+```
+ssh root@192.168.1.223 mkdir -p /etc/kubernetes/pki/etcd
+ssh root@192.168.1.224 mkdir -p /etc/kubernetes/pki/etcd
+scp /etc/kubernetes/pki/{ca.crt,ca.key,sa.key,sa.pub,front-proxy-ca.crt,front-proxy-ca.key} root@192.168.1.223:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/{ca.crt,ca.key,sa.key,sa.pub,front-proxy-ca.crt,front-proxy-ca.key} root@192.168.1.224:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/etcd/{ca.crt,ca.key} root@192.168.1.223:/etc/kubernetes/pki/etcd/
+scp /etc/kubernetes/pki/etcd/{ca.crt,ca.key} root@192.168.1.224:/etc/kubernetes/pki/etcd/
+scp /etc/kubernetes/admin.conf root@192.168.1.223:/etc/kubernetes/
+scp /etc/kubernetes/admin.conf root@192.168.1.224:/etc/kubernetes/
+```
+加入到集群中
+```
+kubeadm join 192.168.88.239:6443 --token sjvoxb.ij9v4i3h9o06igne \
+    --discovery-token-ca-cert-hash sha256:a138c7f3547e5dad98ea152c44e3f1adffc68e71cf7bc9a42af402831bd575c4 \
+    --control-plane
+```
+配置kubectl的config文件
+```
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+**5、其它node节点加入集群 [可选]**
+```
+kubeadm join 192.168.88.239:6443 --token sjvoxb.ij9v4i3h9o06igne \
+    --discovery-token-ca-cert-hash sha256:a138c7f3547e5dad98ea152c44e3f1adffc68e71cf7bc9a42af402831bd575c4
+```
 **4、安装flannel网络插件**
 ```
 cd /etc/kubernetes/yaml/
@@ -234,7 +264,6 @@ kubectl get pod -n kube-system | grep kube-proxy | awk '{system("kubectl delete 
 ```
 kubectl taint nodes node7 node-role.kubernetes.io/master:NoSchedule-
 ```
-
 
 
 
