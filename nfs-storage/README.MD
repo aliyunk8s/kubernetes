@@ -16,7 +16,6 @@ exportfs -arv
 ```
 # 3、部署provisioner（动态创建PV）
 ```
-cat > nfs-provisioner.yaml << EOF
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -59,7 +58,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: nfs-client-provisioner
   namespace: kube-system
@@ -67,6 +66,9 @@ spec:
   replicas: 1
   strategy:
     type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
   template:
     metadata:
       labels:
@@ -83,14 +85,14 @@ spec:
             - name: PROVISIONER_NAME
               value: my-nfs-storageclass
             - name: NFS_SERVER
-              value: 192.168.1.220
+              value: 192.168.88.239
             - name: NFS_PATH
               value: /data/nfs
       volumes:
         - name: nfs-client-root
 
           nfs:
-            server: 192.168.1.220
+            server: 192.168.88.239
             path: /data/nfs
 EOF
 
