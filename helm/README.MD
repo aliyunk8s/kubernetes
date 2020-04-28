@@ -15,7 +15,9 @@ helm init --service-account tiller --override spec.selector.matchLabels.'name'='
 # 3、配置helm仓库
 ```
 mkdir -p ~/.helm/repository/cache
+```
 复制repositories.yaml到~/.helm/repository/下
+```
 helm repo add elastic https://helm.elastic.co
 helm repo add microsoft http://mirror.azure.cn/kubernetes/charts
 helm repo add aliyun https://apphub.aliyuncs.com
