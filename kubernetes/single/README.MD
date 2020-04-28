@@ -262,7 +262,7 @@ kubectl get pod -n kube-system | grep kube-proxy | awk '{system("kubectl delete 
 ```
 **8、删除master上的污点配置 [可选]**
 ```
-kubectl taint nodes node7 node-role.kubernetes.io/master:NoSchedule-
+kubectl taint nodes master1 node-role.kubernetes.io/master:NoSchedule-
 ```
 
 
