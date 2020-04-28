@@ -141,7 +141,7 @@ echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
 sysctl -p
 ```
 
-# 五、准备kubernetes服务镜像
+# 四、准备kubernetes服务镜像
 ```
 docker pull registry.aliyuncs.com/google_containers/kube-apiserver:v1.16.2
 docker pull registry.aliyuncs.com/google_containers/kube-controller-manager:v1.16.2
@@ -169,14 +169,67 @@ docker rmi registry.aliyuncs.com/google_containers/pause:3.1
 docker rmi registry.aliyuncs.com/google_containers/coredns:1.6.2
 ```
 
+# 五、部署kubernetes集群服务
+**1、配置kubeadm init必要的参数配置**
+```
+mkdir -p /etc/kubernetes/yaml
 
+cat > /etc/kubernetes/yaml/kubeadm-config.yaml << EOF
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: ClusterConfiguration
+kubernetesVersion: v1.16.2
+apiServer:
+  certSANs:
+  - "192.168.1.220"
+controlPlaneEndpoint: "192.168.1.220:6443"
+networking:
+  podSubnet: 10.244.0.0/16
+EOF
+```
+**2、初始化安装集群服务**
+```
+kubeadm init --config=/etc/kubernetes/yaml/kubeadm-config.yaml
+```
+创建长期有效的token
+```
+kubeadm token create --ttl 0
+```
+**3、配置kubectl的config文件**
+```
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+**4、安装flannel网络插件**
+```
+cd /etc/kubernetes/yaml/
+wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+sed -i '/vxlan/s/$/,/' /etc/kubernetes/yaml/kube-flannel.yml
+sed -i '/vxlan/a\        "Directrouting": true' /etc/kubernetes/yaml/kube-flannel.yml
+kubectl apply -f kube-flannel.yml
+```
+**5、kube-proxy修改ipvs模式**
+加载ipvs模块
+```
+cat > /etc/sysconfig/modules/ipvs.modules <<EOF
+#!/bin/bash
+modprobe -- ip_vs
+modprobe -- ip_vs_rr
+modprobe -- ip_vs_wrr
+modprobe -- ip_vs_sh
+modprobe -- nf_conntrack_ipv4
+EOF
+chmod 755 /etc/sysconfig/modules/ipvs.modules && bash /etc/sysconfig/modules/ipvs.modules && lsmod | grep -e ip_vs -e nf_conntrack_ipv4
+```
+安装ipvs
+```
+yum -y install ipset ipvsadm
+```
+重启所有kube-proxy的pod
+kubectl get pod -n kube-system | grep kube-proxy | awk '{system("kubectl delete pod "$1" -n kube-system")}'
 
-
-
-
-
-
-
+**6、删除master上的污点配置 [可选]**
+kubectl taint nodes node7 node-role.kubernetes.io/master:NoSchedule-
 
 
 
