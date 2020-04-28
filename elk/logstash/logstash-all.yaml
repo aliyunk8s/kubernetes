@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-conf
+  namespace: logging
+data:
+  logstash.conf: |-
+    input {
+      beats{
+      port => "5044"
+      }
+    }
+    
+    filter {
+      json {
+          source => "message"
+      }
+
+      mutate {
+        convert => [
+                  "responsentime", "float",
+                  "duration", "integer",
+                  "responseDuration", "integer",
+                  "responseCode", "integer",
+                  "code", "integer"
+                  ]
+        split => ["path","?"]
+      }
+
+      if [path][0] {
+          mutate {
+              add_field => {
+                  "responseApi" => "%{[path][0]}"
+              }
+          }
+      }
+    }
+
+    output {
+      elasticsearch{
+        hosts => ["elasticsearch.logging.svc.cluster.local.:9200"]
+      }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash
+  namespace: logging
+spec:
+  selector:
+    matchLabels:
+      io.polaris.service: logstash
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        io.polaris.service: logstash
+    spec:
+      containers:
+      - image: docker.elastic.co/logstash/logstash:7.5.0
+#      - image: registry.cn-shanghai.aliyuncs.com/polaris-team/logstash:7.5.0
+        name: logstash
+        ports:
+        - containerPort: 5044
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2048Mi
+          requests:
+            cpu: "0.3"
+            memory: 512Mi
+        livenessProbe:
+          failureThreshold: 3
+          tcpSocket:
+            port: 5044
+          initialDelaySeconds: 300
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          tcpSocket:
+            port: 5044
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /usr/share/logstash/pipeline
+          name: logstash-conf
+      restartPolicy: Always
+#      imagePullSecrets:
+#      - name: ali-secret
+      volumes:
+      - name: logstash-conf
+        configMap:
+          name: logstash-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logstash
+  namespace: logging
+spec:
+  ports:
+  - name: "tcp"
+    port: 5044
+    targetPort: 5044
+  selector:
+    io.polaris.service: logstash
