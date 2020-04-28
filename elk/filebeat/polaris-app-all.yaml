@@ -1,0 +1,190 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: polaris-app
+spec:
+  ports:
+  - name: "tcp"
+    port: 80
+    targetPort: 80
+  selector:
+    io.polaris.service: polaris-app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: polaris-app-filebeat
+  labels:
+    k8s-app: filebeat
+data:
+  filebeat.yml: |-
+    filebeat.inputs:
+    - type: log
+      paths:
+        - /logs/admin.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-admin'
+    - type: log
+      paths:
+        - /logs/docker.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-docker'
+    - type: log
+      paths:
+        - /logs/envoy.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-envoy'
+    - type: log
+      paths:
+        - /logs/rr.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-rr'
+    - type: log
+      paths:
+        - /logs/run.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-run'
+    - type: log
+      paths:
+        - /logs/stdout.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-stdout'
+    - type: log
+      paths:
+        - /logs/mq.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-mq'
+    - type: log
+      paths:
+        - /logs/access.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-access'
+    - type: log
+      paths:
+        - /logs/error.log
+      tail_files: true
+      exclude_lines: ['kube-probe','health','curl']
+      fields:
+        log_name: 'polaris-app-error'
+    setup.template.name: "app-logs"
+    setup.template.pattern: "app-logs-*"
+    output.kafka:
+      hosts: ["logstash.logging.svc.cluster.local.:9092"]
+      topic: 'polaris-logs'
+      partition.round_robin:
+          reachable_only: false
+      required_acks: 1
+      compression: gzip
+      max_message_bytes: 1000000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polaris-app
+spec:
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      io.polaris.service: polaris-app
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        io.polaris.service: polaris-app
+    spec:
+      nodeSelector:
+        nodelevel: stable
+      containers:
+      - image: docker.elastic.co/beats/filebeat:7.5.0
+        name: filebeat
+        args: [
+          "-c", "/opt/filebeat/filebeat.yml",
+          "-e",
+        ]
+        securityContext:
+          runAsUser: 0
+        resources:
+          requests:
+            cpu: "0.01"
+            memory: 50Mi
+        volumeMounts:
+        - name: polaris-app-filebeat
+          mountPath: /opt/filebeat/
+        - name: filebeat-data
+          mountPath: /usr/share/filebeat/data
+        - name: polaris-logs
+          mountPath: /logs
+      - env:
+        - name: POL_ENV
+          value: prod
+        - name: SERVICE_NAME
+          value: polaris-app
+        image: registry.cn-shanghai.aliyuncs.com/polaris-team/polaris-app:v1.3.3.268.release
+        name: polaris-app
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "0.05"
+            memory: 1000Mi
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /api/task/health
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /api/task/health
+            port: 80
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /data/resources/polaris
+          name: polaris-resources
+        - mountPath: /data/app/polaris-app/config
+          name: polaris-app
+        - mountPath: /data/logs/polaris-app
+          name: polaris-logs
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: ali-secret
+      volumes:
+      - name: polaris-resources
+        persistentVolumeClaim:
+          claimName: resources-pvc
+      - name: polaris-app
+        configMap:
+          name: polaris-app
+      - name: polaris-app-filebeat
+        configMap:
+          name: polaris-app-filebeat
+      - name: polaris-logs
+        emptyDir: {}
+      - name: filebeat-data
+        emptyDir: {}
