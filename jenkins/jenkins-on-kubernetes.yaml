@@ -1,0 +1,201 @@
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: polaris-backend
+#  namespace: jenkins
+#spec:
+#  accessModes:
+#  - ReadWriteMany
+#  resources:
+#    requests:
+#      storage: 20Gi
+#---
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: jenkins-workspaces
+#  namespace: jenkins
+#spec:
+#  accessModes:
+#  - ReadWriteMany
+#  resources:
+#    requests:
+#      storage: 10Gi
+#---
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: jenkins-home
+#  namespace: jenkins
+#spec:
+#  accessModes:
+#  - ReadWriteMany
+#  resources:
+#    requests:
+#      storage: 10Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-k8s-sa
+  namespace: jenkins
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-k8s-sa-cluster
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: jenkins-k8s-sa
+  namespace: jenkins
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      serviceAccount: jenkins-k8s-sa
+      nodeSelector:
+        kubernetes.io/hostname: master1
+      containers:
+      - name: jenkins
+        image: jenkins/jenkins:lts
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+        ports:
+        - containerPort: 8080
+          name: web
+          protocol: TCP
+        - containerPort: 50000
+          name: agent
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /login
+            port: 8080
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          failureThreshold: 12
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: 8080
+          timeoutSeconds: 5
+          failureThreshold: 12
+        volumeMounts:
+        - name: jenkins-volume
+          subPath: jenkins-home
+          mountPath: /var/jenkins_home
+        - name: polaris-backend
+          mountPath: /data/package/polaris-backend
+        - mountPath: /usr/bin/kubectl
+          name: kubectl
+        - mountPath: /root/.kube
+          name: kubeconfig
+        - mountPath: /root/.ssh
+          name: sshkey
+        - mountPath: /var/run/docker.sock
+          name: dockersock
+        - mountPath: /usr/bin/docker
+          name: docker
+        - mountPath: /root/.docker/config.json
+          name: dockerjson
+        - mountPath: /etc/docker/daemon.json
+          name: dockerdaemon
+        - mountPath: /etc/hosts
+          name: hosts
+      volumes:
+      - name: jenkins-volume
+        persistentVolumeClaim:
+          claimName: jenkins-home
+      - name: polaris-backend
+        persistentVolumeClaim:
+          claimName: polaris-backend
+      - name: dockersock
+        hostPath:
+          path: /var/run/docker.sock
+      - name: docker
+        hostPath:
+          path: /usr/bin/docker
+      - name: dockerjson
+        hostPath:
+          path: /root/.docker/config.json
+      - name: dockerdaemon
+        hostPath:
+          path: /etc/docker/daemon.json
+      - name: kubectl
+        hostPath:
+          path: /usr/bin/kubectl
+      - name: kubeconfig
+        hostPath:
+          path: /root/.kube
+      - name: hosts
+        hostPath:
+          path: /etc/hosts
+      - name: sshkey
+        hostPath:
+          path: /root/.ssh
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-service
+  namespace: jenkins
+  labels:
+    app: jenkins
+spec:
+  selector:
+    app: jenkins
+#  type: ClusterIP
+  type: NodePort
+  ports:
+  - name: web
+    port: 80
+    targetPort: web
+    nodePort: 31800
+  - name: agent
+    port: 50000
+    targetPort: agent
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: jenkins-service
+  namespace: jenkins
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+  - host: jenkins.bjx.cloud
+    http:
+      paths:
+      - path:
+        backend:
+          serviceName: jenkins-service
+          servicePort: 80
