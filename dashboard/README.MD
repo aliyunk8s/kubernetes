@@ -69,7 +69,8 @@ kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboar
 
 # 6、配置kubeconfig登录
 ```
-dash_tocken=$(kubectl get secret -n kubernetes-dashboard dashboard-token-sjs7z -o jsonpath={.data.token}|base64 -d)
+dash_secret=$(kubectl get secret -nkubernetes-dashboard |grep "^dashboard-token" |awk '{print $1}')
+dash_tocken=$(kubectl get secret -n kubernetes-dashboard ${dash_secret} -o jsonpath={.data.token}|base64 -d)
 kubectl config set-cluster kubernetes --server=192.168.1.210:6443 --kubeconfig=/root/dashbord-admin.conf
 kubectl config set-credentials dashboard-admin --token=$dash_tocken --kubeconfig=/root/dashbord-admin.conf 
 kubectl config set-context dashboard-admin@kubernetes --cluster=kubernetes --user=dashboard-admin --kubeconfig=/root/dashbord-admin.conf
