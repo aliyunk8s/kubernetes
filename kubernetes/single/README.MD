@@ -209,6 +209,7 @@ sed -i '/vxlan/a\        "Directrouting": true' /etc/kubernetes/yaml/kube-flanne
 kubectl apply -f kube-flannel.yml
 ```
 **5、kube-proxy修改ipvs模式**
+
 加载ipvs模块
 ```
 cat > /etc/sysconfig/modules/ipvs.modules <<EOF
@@ -226,11 +227,13 @@ chmod 755 /etc/sysconfig/modules/ipvs.modules && bash /etc/sysconfig/modules/ipv
 yum -y install ipset ipvsadm
 ```
 重启所有kube-proxy的pod
+```
 kubectl get pod -n kube-system | grep kube-proxy | awk '{system("kubectl delete pod "$1" -n kube-system")}'
-
+```
 **6、删除master上的污点配置 [可选]**
+```
 kubectl taint nodes node7 node-role.kubernetes.io/master:NoSchedule-
-
+```
 
 
 
