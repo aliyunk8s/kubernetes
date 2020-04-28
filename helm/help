@@ -1,0 +1,10 @@
+wget https://get.helm.sh/helm-v2.16.6-linux-amd64.tar.gz
+tar -xf helm-v2.16.6-linux-amd64.tar.gz
+cp linux-amd64/{helm,tiller} /usr/local/bin/
+
+kubectl create serviceaccount --namespace kube-system tiller
+kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+helm init --service-account tiller --override spec.selector.matchLabels.'name'='tiller',spec.selector.matchLabels.'app'='helm' --output yaml | sed 's@apiVersion: extensions/v1beta1@apiVersion: apps/v1@' |sed 's/gcr.io\/kubernetes-helm/registry.cn-hangzhou.aliyuncs.com\/google_containers/' | kubectl apply -f -
+
+mkdir -p ~/.helm/repository
+cd ~/.helm/repository
