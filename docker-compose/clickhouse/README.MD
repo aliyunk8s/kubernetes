@@ -102,22 +102,33 @@ clickhouse-client -h127.0.0.1 --port=9000 -m -uroot --password Qgwp0VaF
 ```
 
 # 基本语法
-```
+
 **创建数据库**
+```
 CREATE DATABASE IF NOT EXISTS channel_data_dev;
+```
 **创建普通表**
+```
 CREATE TABLE test(id UInt16,name String,contry String,create_date date ) ENGINE = MergeTree(create_date, (id), 8192);
+```
 **创建mysql映射库**
+```
 create database testdb ENGINE = MySQL('172.19.132.100:3306', 'testdb', 'root', 'runx@123');
+```
 **创建mysql映射表**
+```
 CREATE TABLE tb1
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(pay_time)
 ORDER BY pay_time AS
 SELECT *
 FROM mysql('127.0.0.1:3306', 'yayun', 'tb1', 'ch_repl', '123') ;
+```
 **创建单表物化视图**
+```
 create MATERIALIZED VIEW channel_data_dev_view.test1 ENGINE = MergeTree() PARTITION BY id ORDER BY id SETTINGS index_granularity = 8192 AS select * from testdb.test1;
+````
 **查看建表语句**
+```
 show create table test1;
 ```
