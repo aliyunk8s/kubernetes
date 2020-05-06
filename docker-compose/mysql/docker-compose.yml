@@ -7,8 +7,8 @@ services:
         ports:
             - "3306:3306"
         volumes:
-            - /data/docker/mysql/data:/var/lib/mysql
-            - /data/docker/mysql/conf:/etc/mysql/conf.d
+            - ./data:/var/lib/mysql
+            - ./conf:/etc/mysql/conf.d
             - /etc/localtime:/etc/localtime
         environment:
             - MYSQL_ROOT_PASSWORD=shangHai@123
