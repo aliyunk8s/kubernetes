@@ -1,6 +1,6 @@
 # 创建目录
 ```
-mkdir /data/docker/clickhouse/{data,log,conf}
+mkdir -p /data/docker/clickhouse/{data,log,conf}
 ```
 
 # 生成随机密码
