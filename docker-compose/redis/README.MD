@@ -1,6 +1,6 @@
 # 创建目录
 ```
-mkdir /data/docker/redis/{data,conf}
+mkdir -p /data/docker/redis/{data,conf}
 ```
 
 # 创建redis配置文件
