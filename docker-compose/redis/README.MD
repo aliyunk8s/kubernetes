@@ -29,12 +29,6 @@ services:
       - ./data:/data
     command:
       redis-server /etc/redis/redis.conf
-    networks:
-      - custom_net
-networks:
-  custom_net:
-    external:
-      name: polaris_net
 EOF
 ```
 
