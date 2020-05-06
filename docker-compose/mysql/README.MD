@@ -11,7 +11,7 @@ vim /data/docker/mysql8/conf/mysqld.cnf
 pid-file = /var/run/mysqld/mysqld.pid
 socket = /var/run/mysqld/mysqld.sock
 datadir = /var/lib/mysql
-default-time-zone = '+8:00'
+#default-time-zone = '+8:00'
 max_connections = 1024
 #log-error = /var/log/mysql/error.log
 # By default we only accept connections from localhost
