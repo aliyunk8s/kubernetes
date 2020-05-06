@@ -5,7 +5,9 @@ mkdir -p /data/docker/clickhouse/{data,log,conf}
 
 # 生成随机密码
 ```
-PASSWORD=$(base64 < /dev/urandom | head -c8); echo "$PASSWORD"; echo -n "$PASSWORD" | sha256sum | tr -d '-'
+PASSWORD=$(base64 < /dev/urandom | head -c8)
+echo "$PASSWORD" > /data/docker/clickhouse/passwd
+echo -n "$PASSWORD" | sha256sum | tr -d '-' >> /data/docker/clickhouse/passwd
 ```
 
 # 创建用户的配置文件
